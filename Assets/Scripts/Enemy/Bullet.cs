@@ -13,19 +13,45 @@ public class Bullet : NetworkBehaviour
 
     TickTimer _lifeTimer;
 
+    [SerializeField] private float _launchForce;
+    [SerializeField] private NetworkTransform _bulletTransform;
+
+
+    //public override void Spawned()
+    //{
+    //    _netRb.Rigidbody.AddForce(transform.right * _initialImpulse, ForceMode.VelocityChange);
+
+    //    _lifeTimer = TickTimer.CreateFromSeconds(Runner, _lifeTime);
+    //}
+
+    //public override void FixedUpdateNetwork()
+    //{
+    //    if (!_lifeTimer.ExpiredOrNotRunning(Runner)) return;
+
+    //    DespawnObject();
+    //}
+
+
     public override void Spawned()
     {
-        _netRb.Rigidbody.AddForce(transform.right * _initialImpulse, ForceMode.VelocityChange);
+        _netRb = GetComponent<NetworkRigidbody3D>();
 
         _lifeTimer = TickTimer.CreateFromSeconds(Runner, _lifeTime);
     }
 
     public override void FixedUpdateNetwork()
     {
-        if (!_lifeTimer.ExpiredOrNotRunning(Runner)) return;
+        _bulletTransform.transform.right = _netRb.Rigidbody.velocity.normalized;
 
+        if (!_lifeTimer.ExpiredOrNotRunning(Runner)) return;
         DespawnObject();
     }
+
+    public void SetBullet(Vector3 dir)
+    {
+        _netRb.Rigidbody.AddForce(dir.normalized * _launchForce, ForceMode.VelocityChange);
+    }
+
 
     void DespawnObject()
     {
@@ -51,9 +77,11 @@ public class Bullet : NetworkBehaviour
 
         if (other.TryGetComponent(out EnemyLife enemyHealth))
         {
+            if (!enemyHealth.HasStateAuthority)
             enemyHealth.TakeDamage(_damage);
         }
 
-        DespawnObject();
+        if (other.gameObject.CompareTag("Cube") || other.gameObject.CompareTag("Walls"))
+            DespawnObject();
     }
 }
